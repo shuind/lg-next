@@ -765,11 +765,12 @@ button:focus-visible, summary:focus-visible, textarea:focus-visible, input:focus
 .composer-clip {
   position: absolute;
   z-index: 5;
-  top: -11px;
-  right: 92px;
-  color: rgb(118 99 74 / 58%);
-  stroke-width: 1.4;
-  transform: rotate(14deg);
+  top: -13px;
+  right: 108px;
+  color: rgb(122 111 96 / 78%);
+  stroke-width: 1.5;
+  transform: rotate(2deg);
+  filter: drop-shadow(0 1px 1px rgb(91 66 39 / 25%));
   pointer-events: none;
 }
 .composer-fold-sheet {
@@ -783,50 +784,52 @@ button:focus-visible, summary:focus-visible, textarea:focus-visible, input:focus
 }
 .composer-fold-sheet-back {
   z-index: 0;
-  top: 2px;
-  right: -34px;
-  width: 210px;
-  height: 120px;
-  background-image: linear-gradient(rgb(205 177 140 / 34%), rgb(205 177 140 / 34%)), url("./assets/paper-grain.png");
-  clip-path: polygon(4% 8%, 87% 0, 100% 12%, 96% 100%, 8% 94%, 0 22%);
-  filter: drop-shadow(3px 6px 7px rgb(91 66 39 / 5%));
-  opacity: .55;
-  transform: rotate(8deg);
+  top: 6px;
+  right: 24px;
+  width: 300px;
+  height: 76px;
+  background-color: #e6d5b9;
+  background-image: linear-gradient(rgb(198 168 128 / 36%), rgb(198 168 128 / 36%)), url("./assets/paper-grain.png");
+  clip-path: polygon(2% 14%, 94% 0, 100% 20%, 98% 100%, 4% 96%, 0 30%);
+  filter: drop-shadow(1px 4px 5px rgb(91 66 39 / 9%));
+  opacity: .92;
+  transform: rotate(2.5deg);
 }
 .composer-fold-sheet-middle {
   z-index: 1;
-  top: 10px;
-  right: -20px;
-  width: 180px;
-  height: 104px;
-  background-image: linear-gradient(rgb(215 190 156 / 20%), rgb(215 190 156 / 20%)), url("./assets/paper-grain.png");
-  clip-path: polygon(2% 12%, 90% 1%, 100% 14%, 95% 100%, 5% 91%, 0 21%);
-  filter: drop-shadow(2px 5px 6px rgb(91 66 39 / 4%));
-  opacity: .7;
-  transform: rotate(-4deg);
+  top: 14px;
+  right: 44px;
+  width: 250px;
+  height: 62px;
+  background-color: #efe2ca;
+  background-image: linear-gradient(rgb(214 189 152 / 24%), rgb(214 189 152 / 24%)), url("./assets/paper-grain.png");
+  clip-path: polygon(1% 16%, 95% 0, 100% 22%, 97% 100%, 3% 94%, 0 32%);
+  filter: drop-shadow(1px 3px 4px rgb(91 66 39 / 7%));
+  opacity: .96;
+  transform: rotate(-1.2deg);
 }
 .composer-fold-sheet-front {
   z-index: 2;
-  right: -26px;
-  bottom: 4px;
-  width: 150px;
-  height: 96px;
-  background-color: #f0e2cd;
-  background-image: linear-gradient(rgb(224 203 174 / 8%), rgb(224 203 174 / 8%)), url("./assets/paper-grain.png");
-  clip-path: polygon(5% 7%, 89% 0, 100% 12%, 97% 100%, 4% 93%, 0 18%);
-  filter: drop-shadow(2px 4px 5px rgb(91 66 39 / 3%));
-  opacity: .8;
-  transform: rotate(-3deg);
+  top: 20px;
+  right: -14px;
+  width: 90px;
+  height: 170px;
+  background-color: #e9dabf;
+  background-image: linear-gradient(rgb(206 180 140 / 26%), rgb(206 180 140 / 26%)), url("./assets/paper-grain.png");
+  clip-path: polygon(10% 1%, 96% 0, 100% 97%, 8% 100%, 0 14%);
+  filter: drop-shadow(2px 3px 4px rgb(91 66 39 / 8%));
+  opacity: .92;
+  transform: rotate(1.8deg);
 }
 .composer-fold-sheet-front::after {
   position: absolute;
-  right: 5px;
-  bottom: 5px;
-  width: 22px;
-  height: 15px;
-  border-right: 1px solid rgb(145 112 69 / 16%);
-  border-bottom: 1px solid rgb(145 112 69 / 18%);
-  background: linear-gradient(145deg, transparent 49%, rgb(222 207 185 / 20%) 51% 70%, transparent 72%);
+  right: 6px;
+  bottom: 8px;
+  width: 18px;
+  height: 24px;
+  border-right: 1px solid rgb(145 112 69 / 20%);
+  border-bottom: 1px solid rgb(145 112 69 / 22%);
+  background: linear-gradient(155deg, transparent 49%, rgb(210 190 160 / 30%) 51% 70%, transparent 72%);
   content: "";
 }
 .composer-card {
@@ -860,16 +863,16 @@ button:focus-visible, summary:focus-visible, textarea:focus-visible, input:focus
 .composer-input-row, .composer-footer, .composer-error { position: relative; z-index: 4; }
 .composer-corner {
   position: absolute;
-  width: 16px;
-  height: 16px;
-  border-color: rgb(169 141 101 / 34%);
+  width: 26px;
+  height: 26px;
+  border-color: rgb(169 141 101 / 46%);
+  background-color: #fbf6ec;
   pointer-events: none;
 }
-.corner-tl { top: 6px; left: 6px; border-top: 1px solid; border-left: 1px solid; }
-.corner-tr { top: 6px; right: 6px; border-top: 1px solid; border-right: 1px solid; }
-.corner-bl { bottom: 6px; left: 6px; border-bottom: 1px solid; border-left: 1px solid; }
-.corner-br { right: 6px; bottom: 6px; border-right: 1px solid; border-bottom: 1px solid; }
-.composer-card .composer-corner { border-color: rgb(169 141 101 / 38%); }
+.corner-tl { top: 5px; left: 5px; border-top: 1px solid; border-left: 1px solid; border-top-left-radius: 100%; }
+.corner-tr { top: 5px; right: 5px; border-top: 1px solid; border-right: 1px solid; border-top-right-radius: 100%; }
+.corner-bl { bottom: 5px; left: 5px; border-bottom: 1px solid; border-left: 1px solid; border-bottom-left-radius: 100%; }
+.corner-br { right: 5px; bottom: 5px; border-right: 1px solid; border-bottom: 1px solid; border-bottom-right-radius: 100%; }
 .composer-card:focus-within {
   border-color: rgb(160 123 72 / 55%);
   box-shadow:
@@ -932,18 +935,20 @@ button:focus-visible, summary:focus-visible, textarea:focus-visible, input:focus
 .round-quiet:hover:not(:disabled) { background-color: rgb(235 226 213 / 62%); }
 .send-button {
   display: grid;
-  width: clamp(36px, 4.47vh, 42px);
-  height: clamp(36px, 4.47vh, 42px);
-  flex: 0 0 clamp(36px, 4.47vh, 42px);
+  width: clamp(34px, 4.2vh, 40px);
+  height: clamp(34px, 4.2vh, 40px);
+  flex: 0 0 clamp(34px, 4.2vh, 40px);
   margin-left: 2px;
   place-items: center;
-  border: 0;
+  border: 1px solid rgb(163 136 98 / 35%);
   border-radius: 50%;
-  background-color: #746b5f;
-  color: #fffaf0;
+  background-color: #d9c8a9;
+  color: #fdfaf3;
   cursor: pointer;
+  box-shadow: inset 0 1px 2px rgb(255 252 244 / 70%), 0 2px 6px rgb(91 66 39 / 10%);
 }
-.send-button:disabled { background-color: #e6d9c5; color: #fffaf1; opacity: 1; }
+.send-button:hover:not(:disabled) { background-color: #cdbb98; }
+.send-button:disabled { background-color: #e5d8bf; color: #fdfaf3; opacity: 1; }
 .composer-hint {
   margin-left: auto;
   color: #675f56;
