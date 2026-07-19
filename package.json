@@ -1,0 +1,46 @@
+{
+  "name": "lg-next",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Conversation-first local novel writing agent",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "pnpm typecheck && pnpm test && pnpm build"
+  },
+  "dependencies": {
+    "@milkdown/core": "7.21.3",
+    "@milkdown/plugin-listener": "7.21.3",
+    "@milkdown/preset-commonmark": "7.21.3",
+    "@milkdown/react": "7.21.3",
+    "@milkdown/theme-nord": "7.21.3",
+    "lucide-react": "0.564.0",
+    "openai": "6.48.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.2",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.2.0",
+    "electron": "43.1.1",
+    "electron-vite": "5.0.0",
+    "typescript": "7.0.2",
+    "vite": "7.3.6",
+    "vitest": "4.1.10"
+  },
+  "packageManager": "pnpm@10.27.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild"
+    ]
+  }
+}

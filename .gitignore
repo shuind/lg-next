@@ -1,0 +1,11 @@
+node_modules/
+out/
+dist/
+coverage/
+*.log
+.DS_Store
+.playwright-mcp/
+.pnpm-store/
+books/
+ChatGPT Image*.png
+QQ*.png
