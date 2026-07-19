@@ -754,27 +754,15 @@ button:focus-visible, summary:focus-visible, textarea:focus-visible, input:focus
 .composer-fold {
   position: absolute;
   z-index: 1;
-  top: -20px;
   right: 0;
+  bottom: 8px;
   left: 0;
-  width: min(clamp(742px, calc(57.42vw - 18px), 942px), calc(100% - 82px));
-  height: 92px;
+  width: min(clamp(760px, 60vw, 980px), calc(100% - 48px));
+  height: 130px;
   margin: 0 auto;
-  transform: translateX(-9px);
   pointer-events: none;
 }
-.composer-clip-layer {
-  position: absolute;
-  z-index: 1;
-  top: -20px;
-  right: 0;
-  left: 0;
-  width: min(clamp(742px, calc(57.42vw - 18px), 942px), calc(100% - 82px));
-  height: 92px;
-  margin: 0 auto;
-  transform: translateX(-9px);
-  pointer-events: none;
-}
+.composer-clip-layer { display: none; }
 .composer-fold-sheet {
   position: absolute;
   border: 1px solid rgb(145 111 66 / 24%);
@@ -786,40 +774,40 @@ button:focus-visible, summary:focus-visible, textarea:focus-visible, input:focus
 }
 .composer-fold-sheet-back {
   z-index: 0;
-  top: 0;
-  right: -94px;
-  width: 150px;
-  height: 100px;
+  right: -60px;
+  bottom: -14px;
+  width: 190px;
+  height: 120px;
   background-image: linear-gradient(rgb(205 177 140 / 34%), rgb(205 177 140 / 34%)), url("./assets/paper-grain.png");
   clip-path: polygon(4% 8%, 87% 0, 100% 12%, 96% 100%, 8% 94%, 0 22%);
-  filter: drop-shadow(3px 6px 7px rgb(91 66 39 / 4%));
-  opacity: .58;
-  transform: rotate(9deg);
+  filter: drop-shadow(3px 6px 7px rgb(91 66 39 / 5%));
+  opacity: .55;
+  transform: rotate(-7deg);
 }
 .composer-fold-sheet-middle {
   z-index: 1;
-  top: 4px;
-  right: -80px;
-  width: 140px;
-  height: 92px;
+  right: -44px;
+  bottom: -8px;
+  width: 170px;
+  height: 108px;
   background-image: linear-gradient(rgb(215 190 156 / 20%), rgb(215 190 156 / 20%)), url("./assets/paper-grain.png");
   clip-path: polygon(2% 12%, 90% 1%, 100% 14%, 95% 100%, 5% 91%, 0 21%);
-  filter: drop-shadow(2px 5px 6px rgb(91 66 39 / 3%));
-  opacity: .72;
-  transform: rotate(6deg);
+  filter: drop-shadow(2px 5px 6px rgb(91 66 39 / 4%));
+  opacity: .7;
+  transform: rotate(4deg);
 }
 .composer-fold-sheet-front {
   z-index: 2;
-  top: 8px;
-  right: -66px;
-  width: 130px;
-  height: 84px;
+  right: -30px;
+  bottom: -2px;
+  width: 150px;
+  height: 96px;
   background-color: #f0e2cd;
   background-image: linear-gradient(rgb(224 203 174 / 8%), rgb(224 203 174 / 8%)), url("./assets/paper-grain.png");
   clip-path: polygon(5% 7%, 89% 0, 100% 12%, 97% 100%, 4% 93%, 0 18%);
-  filter: drop-shadow(2px 4px 5px rgb(91 66 39 / 2%));
-  opacity: .88;
-  transform: rotate(3deg);
+  filter: drop-shadow(2px 4px 5px rgb(91 66 39 / 3%));
+  opacity: .85;
+  transform: rotate(-2deg);
 }
 .composer-fold-sheet-front::after {
   position: absolute;
@@ -832,50 +820,34 @@ button:focus-visible, summary:focus-visible, textarea:focus-visible, input:focus
   background: linear-gradient(145deg, transparent 49%, rgb(222 207 185 / 20%) 51% 70%, transparent 72%);
   content: "";
 }
-.composer-paperclip {
-  position: absolute;
-  z-index: 3;
-  top: 4px;
-  right: 69px;
-  color: rgb(92 82 69 / 53%);
-  stroke-width: 1.35;
-  transform: rotate(-18deg);
-  pointer-events: none;
-}
 .composer-card {
   position: relative;
   z-index: 2;
   display: flex;
-  width: min(clamp(736px, calc(57.42vw - 24px), 936px), calc(100% - 24px));
-  min-height: clamp(138px, 16.1vh, 146px);
+  width: min(clamp(760px, 60vw, 980px), calc(100% - 48px));
+  min-height: clamp(138px, 16.1vh, 150px);
   flex-direction: column;
   margin: 0 auto;
-  transform: translateX(-12px);
-  padding: clamp(16px, 2.1vh, 20px) 20px clamp(14px, 1.8vh, 17px) 23px;
-  border: 0;
-  border-radius: 3px;
-  background-color: #faf4e9;
+  padding: clamp(18px, 2.3vh, 22px) 24px clamp(14px, 1.8vh, 18px) 26px;
+  border: 1px solid rgb(176 143 98 / 42%);
+  border-radius: 10px;
+  background-color: #fbf6ec;
   background-image: url("./assets/paper-texture-rich.png");
   background-repeat: repeat;
   outline: 0;
-  box-shadow: 0 14px 36px rgb(91 66 39 / 11%) !important;
-  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+  box-shadow:
+    0 12px 34px rgb(91 66 39 / 9%),
+    inset 0 0 0 1px rgb(251 246 236 / 90%) !important;
 }
-.composer-card::before, .composer-card::after { content: none; }
-.composer-frame {
+.composer-card::before {
   position: absolute;
-  z-index: 3;
-  inset: 0;
-  display: block;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
+  inset: 5px;
+  border: 1px solid rgb(194 164 122 / 38%);
+  border-radius: 7px;
+  content: "";
   pointer-events: none;
 }
-.composer-frame path { fill: none; }
-.composer-frame-outer { stroke: rgb(176 143 98 / 76%); stroke-width: 1; }
-.composer-frame-inner { stroke: rgb(194 164 122 / 59%); stroke-width: 1; }
-.composer-frame-corners { stroke: rgb(160 123 72 / 65%); stroke-width: 1; }
+.composer-card::after { content: none; }
 .composer-input-row, .composer-footer, .composer-error { position: relative; z-index: 4; }
 .composer-corner {
   position: absolute;
@@ -889,7 +861,12 @@ button:focus-visible, summary:focus-visible, textarea:focus-visible, input:focus
 .corner-bl { bottom: 6px; left: 6px; border-bottom: 1px solid; border-left: 1px solid; }
 .corner-br { right: 6px; bottom: 6px; border-right: 1px solid; border-bottom: 1px solid; }
 .composer-card .composer-corner { border-color: rgb(169 141 101 / 38%); }
-.composer-card:focus-within { box-shadow: 0 15px 38px rgb(91 66 39 / 13%) !important; }
+.composer-card:focus-within {
+  border-color: rgb(160 123 72 / 55%);
+  box-shadow:
+    0 14px 38px rgb(91 66 39 / 12%),
+    inset 0 0 0 1px rgb(251 246 236 / 90%) !important;
+}
 .composer-input-row {
   display: flex;
   min-width: 0;

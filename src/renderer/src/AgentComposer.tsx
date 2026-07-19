@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react"
-import { BookOpen, Check, ChevronDown, Diamond, Feather, Paperclip, Send, Settings, Square } from "lucide-react"
+import { BookOpen, Check, ChevronDown, Diamond, Feather, Send, Settings, Square } from "lucide-react"
 import type { ModelStatus } from "../../shared/contracts"
 
 export function AgentComposer({
@@ -51,15 +51,7 @@ export function AgentComposer({
         <span className="composer-fold-sheet composer-fold-sheet-middle" />
         <span className="composer-fold-sheet composer-fold-sheet-front" />
       </div>
-      <div className="composer-clip-layer" aria-hidden="true">
-        <Paperclip className="composer-paperclip" size={18} />
-      </div>
       <div className="composer-card">
-        <svg className="composer-frame" viewBox="0 0 960 156" preserveAspectRatio="none" aria-hidden="true">
-          <path className="composer-frame-outer" vectorEffect="non-scaling-stroke" d="M 14 1 H 946 L 959 14 V 141 L 945 155 H 14 L 1 142 V 14 Z" />
-          <path className="composer-frame-inner" vectorEffect="non-scaling-stroke" d="M 22 8 H 939 L 952 20 V 136 L 940 148 H 20 L 8 137 V 20 Z" />
-          <path className="composer-frame-corners" vectorEffect="non-scaling-stroke" d="M 1 22 H 10 V 9 H 22 M 938 9 H 951 V 22 H 959 M 959 134 H 950 V 147 H 938 M 22 147 H 9 V 135 H 1" />
-        </svg>
         <div className="composer-input-row">
           <Feather className="composer-prompt-icon" size={16} aria-hidden="true" />
           <textarea
