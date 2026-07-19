@@ -863,16 +863,15 @@ button:focus-visible, summary:focus-visible, textarea:focus-visible, input:focus
 .composer-input-row, .composer-footer, .composer-error { position: relative; z-index: 4; }
 .composer-corner {
   position: absolute;
-  width: 26px;
-  height: 26px;
-  border-color: rgb(169 141 101 / 46%);
-  background-color: #fbf6ec;
+  width: 18px;
+  height: 18px;
+  border: 0 solid rgb(178 152 113 / 45%);
   pointer-events: none;
 }
-.corner-tl { top: 5px; left: 5px; border-top: 1px solid; border-left: 1px solid; border-top-left-radius: 100%; }
-.corner-tr { top: 5px; right: 5px; border-top: 1px solid; border-right: 1px solid; border-top-right-radius: 100%; }
-.corner-bl { bottom: 5px; left: 5px; border-bottom: 1px solid; border-left: 1px solid; border-bottom-left-radius: 100%; }
-.corner-br { right: 5px; bottom: 5px; border-right: 1px solid; border-bottom: 1px solid; border-bottom-right-radius: 100%; }
+.corner-tl { top: 5px; left: 5px; border-right-width: 1px; border-bottom-width: 1px; border-bottom-right-radius: 100%; }
+.corner-tr { top: 5px; right: 5px; border-left-width: 1px; border-bottom-width: 1px; border-bottom-left-radius: 100%; }
+.corner-bl { bottom: 5px; left: 5px; border-top-width: 1px; border-right-width: 1px; border-top-right-radius: 100%; }
+.corner-br { right: 5px; bottom: 5px; border-top-width: 1px; border-left-width: 1px; border-top-left-radius: 100%; }
 .composer-card:focus-within {
   border-color: rgb(160 123 72 / 55%);
   box-shadow:
