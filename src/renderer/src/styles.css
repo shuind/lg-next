@@ -581,12 +581,12 @@ button:focus-visible, summary:focus-visible, textarea:focus-visible, input:focus
   bottom: 2.8%;
   left: 12.55%;
   border: 0;
-  background-color: rgb(255 251 244 / 90%);
+  background-color: rgb(255 250 241 / 94%);
   background-image: url("./assets/paper-grain.png");
   background-size: 460px 460px;
   clip-path: polygon(.6% .3%, 99.7% 0, 84.7% 83.5%, 8.1% 99.8%, 1.2% 58%);
-  box-shadow: inset 15px 0 28px rgb(132 103 67 / 8%);
-  filter: drop-shadow(-11px 13px 24px rgb(99 74 46 / 13%));
+  box-shadow: inset 18px 0 32px rgb(132 103 67 / 12%);
+  filter: drop-shadow(-13px 16px 26px rgb(99 74 46 / 22%));
   transform: rotate(-1.2deg);
   transform-origin: 52% 44%;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, rgb(0 0 0 / 74%) 2.8%, #000 5.2%, #000 100%);
@@ -598,13 +598,13 @@ button:focus-visible, summary:focus-visible, textarea:focus-visible, input:focus
   right: 1.5%;
   bottom: 6.2%;
   left: 11.4%;
-  border-color: rgb(171 148 113 / 7%);
-  background-color: rgb(249 243 233 / 36%);
+  border-color: rgb(163 138 102 / 20%);
+  background-color: rgb(244 236 222 / 62%);
   background-image: url("./assets/paper-grain.png");
   background-size: 500px 500px;
   clip-path: polygon(1.2% 1.4%, 98.7% 0, 96.8% 76%, 76% 91%, 11% 100%, 0 55%);
-  box-shadow: 0 17px 42px rgb(99 74 46 / 5%);
-  opacity: .58;
+  box-shadow: 0 20px 48px rgb(99 74 46 / 11%);
+  opacity: .78;
   transform: rotate(1.05deg);
   transform-origin: 54% 42%;
 }
@@ -626,13 +626,13 @@ button:focus-visible, summary:focus-visible, textarea:focus-visible, input:focus
   right: 1.8%;
   width: 31%;
   height: 65%;
-  border-color: rgb(171 148 113 / 6%);
-  background-color: rgb(250 244 234 / 33%);
+  border-color: rgb(163 138 102 / 22%);
+  background-color: rgb(243 234 219 / 60%);
   background-image: url("./assets/paper-grain.png");
   background-size: 520px 520px;
-  opacity: .46;
+  opacity: .7;
   transform: rotate(-5.4deg);
-  box-shadow: 0 18px 46px rgb(99 74 46 / 4%);
+  box-shadow: -6px 24px 52px rgb(99 74 46 / 14%);
 }
 .story-corner-group, .story-right-group, .story-corner-front, .story-right-front {
   position: absolute;
@@ -851,14 +851,14 @@ button:focus-visible, summary:focus-visible, textarea:focus-visible, input:focus
   flex-direction: column;
   margin: 0 auto;
   transform: translateX(-12px);
-  padding: clamp(16px, 2.1vh, 20px) 20px clamp(14px, 1.8vh, 17px) 23px;
+  padding: clamp(16px, 2.1vh, 20px) 24px clamp(14px, 1.8vh, 17px) 24px;
   border: 0;
   border-radius: 3px;
-  background-color: #faf4e9;
+  background-color: #fbf5eb;
   background-image: url("./assets/paper-texture-rich.png");
   background-repeat: repeat;
   outline: 0;
-  box-shadow: 0 14px 36px rgb(91 66 39 / 11%) !important;
+  box-shadow: 0 18px 44px rgb(91 66 39 / 16%) !important;
   clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
 }
 .composer-card::before, .composer-card::after { content: none; }
@@ -873,9 +873,9 @@ button:focus-visible, summary:focus-visible, textarea:focus-visible, input:focus
   pointer-events: none;
 }
 .composer-frame path { fill: none; }
-.composer-frame-outer { stroke: rgb(176 143 98 / 76%); stroke-width: 1; }
-.composer-frame-inner { stroke: rgb(194 164 122 / 59%); stroke-width: 1; }
-.composer-frame-corners { stroke: rgb(160 123 72 / 65%); stroke-width: 1; }
+.composer-frame-outer { stroke: rgb(150 117 72 / 92%); stroke-width: 1.2; }
+.composer-frame-inner { stroke: rgb(176 145 100 / 74%); stroke-width: 1; }
+.composer-frame-corners { stroke: rgb(133 100 56 / 92%); stroke-width: 1.4; }
 .composer-input-row, .composer-footer, .composer-error { position: relative; z-index: 4; }
 .composer-corner {
   position: absolute;
