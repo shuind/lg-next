@@ -52,11 +52,7 @@ export function AgentComposer({
         <span className="composer-fold-sheet composer-fold-sheet-front" />
       </div>
       <div className="composer-card">
-        <Paperclip className="composer-clip" size={20} aria-hidden="true" />
-        <span className="composer-corner corner-tl" aria-hidden="true" />
-        <span className="composer-corner corner-tr" aria-hidden="true" />
-        <span className="composer-corner corner-bl" aria-hidden="true" />
-        <span className="composer-corner corner-br" aria-hidden="true" />
+        <Paperclip className="composer-clip" size={18} aria-hidden="true" />
         <div className="composer-input-row">
           <Feather className="composer-prompt-icon" size={16} aria-hidden="true" />
           <textarea

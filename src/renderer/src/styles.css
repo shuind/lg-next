@@ -765,73 +765,50 @@ button:focus-visible, summary:focus-visible, textarea:focus-visible, input:focus
 .composer-clip {
   position: absolute;
   z-index: 5;
-  top: -13px;
-  right: 108px;
-  color: rgb(122 111 96 / 78%);
+  top: -10px;
+  right: 34px;
+  color: rgb(128 116 100 / 72%);
   stroke-width: 1.5;
-  transform: rotate(2deg);
-  filter: drop-shadow(0 1px 1px rgb(91 66 39 / 25%));
+  transform: rotate(10deg);
+  filter: drop-shadow(0 1px 1px rgb(91 66 39 / 20%));
   pointer-events: none;
 }
 .composer-fold-sheet {
   position: absolute;
-  border: 1px solid rgb(145 111 66 / 24%);
+  border: 1px solid rgb(145 111 66 / 18%);
   background-color: #ecdbc1;
   background-image: url("./assets/paper-grain.png");
   background-size: 260px 260px;
-  transform-origin: 8% 18%;
   pointer-events: none;
 }
 .composer-fold-sheet-back {
   z-index: 0;
-  top: 6px;
-  right: 24px;
-  width: 300px;
-  height: 76px;
+  top: 10px;
+  right: -20px;
+  width: 130px;
+  height: 92px;
   background-color: #e6d5b9;
-  background-image: linear-gradient(rgb(198 168 128 / 36%), rgb(198 168 128 / 36%)), url("./assets/paper-grain.png");
-  clip-path: polygon(2% 14%, 94% 0, 100% 20%, 98% 100%, 4% 96%, 0 30%);
-  filter: drop-shadow(1px 4px 5px rgb(91 66 39 / 9%));
-  opacity: .92;
-  transform: rotate(2.5deg);
+  background-image: linear-gradient(rgb(198 168 128 / 30%), rgb(198 168 128 / 30%)), url("./assets/paper-grain.png");
+  clip-path: polygon(6% 6%, 92% 0, 100% 16%, 96% 100%, 4% 94%, 0 24%);
+  filter: drop-shadow(1px 3px 4px rgb(91 66 39 / 7%));
+  opacity: .85;
+  transform: rotate(9deg);
 }
 .composer-fold-sheet-middle {
   z-index: 1;
-  top: 14px;
-  right: 44px;
-  width: 250px;
-  height: 62px;
-  background-color: #efe2ca;
-  background-image: linear-gradient(rgb(214 189 152 / 24%), rgb(214 189 152 / 24%)), url("./assets/paper-grain.png");
-  clip-path: polygon(1% 16%, 95% 0, 100% 22%, 97% 100%, 3% 94%, 0 32%);
-  filter: drop-shadow(1px 3px 4px rgb(91 66 39 / 7%));
-  opacity: .96;
-  transform: rotate(-1.2deg);
-}
-.composer-fold-sheet-front {
-  z-index: 2;
-  top: 20px;
-  right: -14px;
-  width: 90px;
-  height: 170px;
-  background-color: #e9dabf;
-  background-image: linear-gradient(rgb(206 180 140 / 26%), rgb(206 180 140 / 26%)), url("./assets/paper-grain.png");
-  clip-path: polygon(10% 1%, 96% 0, 100% 97%, 8% 100%, 0 14%);
-  filter: drop-shadow(2px 3px 4px rgb(91 66 39 / 8%));
+  top: 16px;
+  right: -6px;
+  width: 112px;
+  height: 78px;
+  background-color: #f0e3cc;
+  background-image: linear-gradient(rgb(214 189 152 / 20%), rgb(214 189 152 / 20%)), url("./assets/paper-grain.png");
+  clip-path: polygon(3% 10%, 94% 0, 100% 18%, 96% 100%, 4% 92%, 0 26%);
+  filter: drop-shadow(1px 2px 3px rgb(91 66 39 / 6%));
   opacity: .92;
-  transform: rotate(1.8deg);
+  transform: rotate(4deg);
 }
-.composer-fold-sheet-front::after {
-  position: absolute;
-  right: 6px;
-  bottom: 8px;
-  width: 18px;
-  height: 24px;
-  border-right: 1px solid rgb(145 112 69 / 20%);
-  border-bottom: 1px solid rgb(145 112 69 / 22%);
-  background: linear-gradient(155deg, transparent 49%, rgb(210 190 160 / 30%) 51% 70%, transparent 72%);
-  content: "";
-}
+.composer-fold-sheet-front { display: none; }
+.composer-fold-sheet-front::after { content: none; }
 .composer-card {
   position: relative;
   z-index: 2;
@@ -841,42 +818,27 @@ button:focus-visible, summary:focus-visible, textarea:focus-visible, input:focus
   flex-direction: column;
   margin: 0 auto;
   padding: clamp(18px, 2.3vh, 22px) 24px clamp(14px, 1.8vh, 18px) 26px;
-  border: 1px solid rgb(176 143 98 / 42%);
-  border-radius: 10px;
-  background-color: #fbf6ec;
+  border: 1px solid rgb(176 143 98 / 45%);
+  border-radius: 12px;
+  background-color: #fdf9ef;
   background-image: url("./assets/paper-texture-rich.png");
   background-repeat: repeat;
   outline: 0;
-  box-shadow:
-    0 12px 34px rgb(91 66 39 / 9%),
-    inset 0 0 0 1px rgb(251 246 236 / 90%) !important;
+  box-shadow: 0 10px 30px rgb(91 66 39 / 8%) !important;
 }
 .composer-card::before {
   position: absolute;
-  inset: 5px;
-  border: 1px solid rgb(194 164 122 / 38%);
-  border-radius: 7px;
+  inset: 4px;
+  border: 1px solid rgb(194 164 122 / 32%);
+  border-radius: 9px;
   content: "";
   pointer-events: none;
 }
 .composer-card::after { content: none; }
 .composer-input-row, .composer-footer, .composer-error { position: relative; z-index: 4; }
-.composer-corner {
-  position: absolute;
-  width: 18px;
-  height: 18px;
-  border: 0 solid rgb(178 152 113 / 45%);
-  pointer-events: none;
-}
-.corner-tl { top: 5px; left: 5px; border-right-width: 1px; border-bottom-width: 1px; border-bottom-right-radius: 100%; }
-.corner-tr { top: 5px; right: 5px; border-left-width: 1px; border-bottom-width: 1px; border-bottom-left-radius: 100%; }
-.corner-bl { bottom: 5px; left: 5px; border-top-width: 1px; border-right-width: 1px; border-top-right-radius: 100%; }
-.corner-br { right: 5px; bottom: 5px; border-top-width: 1px; border-left-width: 1px; border-top-left-radius: 100%; }
 .composer-card:focus-within {
   border-color: rgb(160 123 72 / 55%);
-  box-shadow:
-    0 14px 38px rgb(91 66 39 / 12%),
-    inset 0 0 0 1px rgb(251 246 236 / 90%) !important;
+  box-shadow: 0 12px 34px rgb(91 66 39 / 11%) !important;
 }
 .composer-input-row {
   display: flex;
