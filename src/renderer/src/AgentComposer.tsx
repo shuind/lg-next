@@ -53,6 +53,14 @@ export function AgentComposer({
       </div>
       <div className="composer-card">
         <Paperclip className="composer-clip" size={18} aria-hidden="true" />
+        <span className="frame-edge edge-top" aria-hidden="true" />
+        <span className="frame-edge edge-bottom" aria-hidden="true" />
+        <span className="frame-edge edge-left" aria-hidden="true" />
+        <span className="frame-edge edge-right" aria-hidden="true" />
+        <span className="frame-arc arc-tl" aria-hidden="true" />
+        <span className="frame-arc arc-tr" aria-hidden="true" />
+        <span className="frame-arc arc-bl" aria-hidden="true" />
+        <span className="frame-arc arc-br" aria-hidden="true" />
         <div className="composer-input-row">
           <Feather className="composer-prompt-icon" size={16} aria-hidden="true" />
           <textarea

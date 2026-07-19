@@ -839,15 +839,30 @@ button:focus-visible, summary:focus-visible, textarea:focus-visible, input:focus
     0 10px 30px rgb(105 78 48 / 9%),
     0 2px 8px rgb(105 78 48 / 6%) !important;
 }
-.composer-card::before {
+.composer-card::before { content: none; }
+.composer-card::after { content: none; }
+.frame-edge {
   position: absolute;
-  inset: 4px;
-  border: 1px solid rgb(194 164 122 / 32%);
-  border-radius: 9px;
-  content: "";
+  z-index: 3;
+  background-color: rgb(182 152 110 / 42%);
   pointer-events: none;
 }
-.composer-card::after { content: none; }
+.edge-top { top: 5px; right: 23px; left: 23px; height: 1px; }
+.edge-bottom { right: 23px; bottom: 5px; left: 23px; height: 1px; }
+.edge-left { top: 23px; bottom: 23px; left: 5px; width: 1px; }
+.edge-right { top: 23px; right: 5px; bottom: 23px; width: 1px; }
+.frame-arc {
+  position: absolute;
+  z-index: 3;
+  width: 18px;
+  height: 18px;
+  border: 0 solid rgb(182 152 110 / 42%);
+  pointer-events: none;
+}
+.arc-tl { top: 5px; left: 5px; border-right-width: 1px; border-bottom-width: 1px; border-bottom-right-radius: 100%; }
+.arc-tr { top: 5px; right: 5px; border-bottom-width: 1px; border-left-width: 1px; border-bottom-left-radius: 100%; }
+.arc-bl { bottom: 5px; left: 5px; border-top-width: 1px; border-right-width: 1px; border-top-right-radius: 100%; }
+.arc-br { right: 5px; bottom: 5px; border-top-width: 1px; border-left-width: 1px; border-top-left-radius: 100%; }
 .composer-input-row, .composer-footer, .composer-error { position: relative; z-index: 4; }
 .composer-card:focus-within {
   border-color: rgb(160 123 72 / 55%);
