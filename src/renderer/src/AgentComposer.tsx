@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react"
-import { BookOpen, Check, ChevronDown, Diamond, Feather, Send, Settings, Square } from "lucide-react"
+import { BookOpen, Check, ChevronDown, Diamond, Feather, Paperclip, Send, Settings, Square } from "lucide-react"
 import type { ModelStatus } from "../../shared/contracts"
 
 export function AgentComposer({
@@ -52,6 +52,11 @@ export function AgentComposer({
         <span className="composer-fold-sheet composer-fold-sheet-front" />
       </div>
       <div className="composer-card">
+        <Paperclip className="composer-clip" size={20} aria-hidden="true" />
+        <span className="composer-corner corner-tl" aria-hidden="true" />
+        <span className="composer-corner corner-tr" aria-hidden="true" />
+        <span className="composer-corner corner-bl" aria-hidden="true" />
+        <span className="composer-corner corner-br" aria-hidden="true" />
         <div className="composer-input-row">
           <Feather className="composer-prompt-icon" size={16} aria-hidden="true" />
           <textarea

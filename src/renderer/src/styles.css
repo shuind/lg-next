@@ -587,25 +587,25 @@ button:focus-visible, summary:focus-visible, textarea:focus-visible, input:focus
   clip-path: polygon(.6% .3%, 99.7% 0, 84.7% 83.5%, 8.1% 99.8%, 1.2% 58%);
   box-shadow: inset 15px 0 28px rgb(132 103 67 / 8%);
   filter: drop-shadow(-11px 13px 24px rgb(99 74 46 / 13%));
-  transform: rotate(-1.2deg);
+  transform: rotate(-.7deg);
   transform-origin: 52% 44%;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, rgb(0 0 0 / 74%) 2.8%, #000 5.2%, #000 100%);
   mask-image: linear-gradient(to bottom, transparent 0, rgb(0 0 0 / 74%) 2.8%, #000 5.2%, #000 100%);
 }
 .paper-sheet-back {
   z-index: 1;
-  top: 9.2%;
-  right: 1.5%;
-  bottom: 6.2%;
-  left: 11.4%;
-  border-color: rgb(171 148 113 / 7%);
-  background-color: rgb(249 243 233 / 36%);
+  top: 8.4%;
+  right: .6%;
+  bottom: 5.2%;
+  left: 10.6%;
+  border-color: rgb(171 148 113 / 10%);
+  background-color: rgb(249 243 233 / 44%);
   background-image: url("./assets/paper-grain.png");
   background-size: 500px 500px;
   clip-path: polygon(1.2% 1.4%, 98.7% 0, 96.8% 76%, 76% 91%, 11% 100%, 0 55%);
-  box-shadow: 0 17px 42px rgb(99 74 46 / 5%);
-  opacity: .58;
-  transform: rotate(1.05deg);
+  box-shadow: 0 17px 42px rgb(99 74 46 / 7%);
+  opacity: .72;
+  transform: rotate(2.4deg);
   transform-origin: 54% 42%;
 }
 .paper-structure {
@@ -622,17 +622,17 @@ button:focus-visible, summary:focus-visible, textarea:focus-visible, input:focus
 }
 .paper-sheet-side {
   z-index: 1;
-  top: 15%;
-  right: 1.8%;
-  width: 31%;
-  height: 65%;
-  border-color: rgb(171 148 113 / 6%);
-  background-color: rgb(250 244 234 / 33%);
+  top: 13%;
+  right: .6%;
+  width: 33%;
+  height: 68%;
+  border-color: rgb(171 148 113 / 9%);
+  background-color: rgb(250 244 234 / 40%);
   background-image: url("./assets/paper-grain.png");
   background-size: 520px 520px;
-  opacity: .46;
-  transform: rotate(-5.4deg);
-  box-shadow: 0 18px 46px rgb(99 74 46 / 4%);
+  opacity: .58;
+  transform: rotate(-8.5deg);
+  box-shadow: 0 18px 46px rgb(99 74 46 / 6%);
 }
 .story-corner-group, .story-right-group, .story-corner-front, .story-right-front {
   position: absolute;
@@ -754,15 +754,24 @@ button:focus-visible, summary:focus-visible, textarea:focus-visible, input:focus
 .composer-fold {
   position: absolute;
   z-index: 1;
+  top: -30px;
   right: 0;
   bottom: 8px;
   left: 0;
   width: min(clamp(760px, 60vw, 980px), calc(100% - 48px));
-  height: 130px;
   margin: 0 auto;
   pointer-events: none;
 }
-.composer-clip-layer { display: none; }
+.composer-clip {
+  position: absolute;
+  z-index: 5;
+  top: -11px;
+  right: 92px;
+  color: rgb(118 99 74 / 58%);
+  stroke-width: 1.4;
+  transform: rotate(14deg);
+  pointer-events: none;
+}
 .composer-fold-sheet {
   position: absolute;
   border: 1px solid rgb(145 111 66 / 24%);
@@ -774,40 +783,40 @@ button:focus-visible, summary:focus-visible, textarea:focus-visible, input:focus
 }
 .composer-fold-sheet-back {
   z-index: 0;
-  right: -60px;
-  bottom: -14px;
-  width: 190px;
+  top: 2px;
+  right: -34px;
+  width: 210px;
   height: 120px;
   background-image: linear-gradient(rgb(205 177 140 / 34%), rgb(205 177 140 / 34%)), url("./assets/paper-grain.png");
   clip-path: polygon(4% 8%, 87% 0, 100% 12%, 96% 100%, 8% 94%, 0 22%);
   filter: drop-shadow(3px 6px 7px rgb(91 66 39 / 5%));
   opacity: .55;
-  transform: rotate(-7deg);
+  transform: rotate(8deg);
 }
 .composer-fold-sheet-middle {
   z-index: 1;
-  right: -44px;
-  bottom: -8px;
-  width: 170px;
-  height: 108px;
+  top: 10px;
+  right: -20px;
+  width: 180px;
+  height: 104px;
   background-image: linear-gradient(rgb(215 190 156 / 20%), rgb(215 190 156 / 20%)), url("./assets/paper-grain.png");
   clip-path: polygon(2% 12%, 90% 1%, 100% 14%, 95% 100%, 5% 91%, 0 21%);
   filter: drop-shadow(2px 5px 6px rgb(91 66 39 / 4%));
   opacity: .7;
-  transform: rotate(4deg);
+  transform: rotate(-4deg);
 }
 .composer-fold-sheet-front {
   z-index: 2;
-  right: -30px;
-  bottom: -2px;
+  right: -26px;
+  bottom: 4px;
   width: 150px;
   height: 96px;
   background-color: #f0e2cd;
   background-image: linear-gradient(rgb(224 203 174 / 8%), rgb(224 203 174 / 8%)), url("./assets/paper-grain.png");
   clip-path: polygon(5% 7%, 89% 0, 100% 12%, 97% 100%, 4% 93%, 0 18%);
   filter: drop-shadow(2px 4px 5px rgb(91 66 39 / 3%));
-  opacity: .85;
-  transform: rotate(-2deg);
+  opacity: .8;
+  transform: rotate(-3deg);
 }
 .composer-fold-sheet-front::after {
   position: absolute;
