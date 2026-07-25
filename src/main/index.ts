@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url"
 import type { OpenedProject, ProjectUsageStats } from "../shared/contracts"
 import { ProjectRuntime } from "../core/project-runtime"
 import { AgentProcess } from "./agent-process"
-import { loadModelConfig, modelSettings, modelStatus, saveModelSettings, testModel } from "./model-config"
+import { activateModelRecord, deleteModelRecord, loadModelConfig, modelSettings, modelStatus, saveModelSettings, testModel } from "./model-config"
 import type { AgentHistoryMessage, AgentWorkerEvent } from "../agent/protocol"
 import type { TaskEvent } from "../shared/contracts"
 import { applyRelayResponse, createRelayPackage, inspectRelayResponse } from "./relay-service"
@@ -193,8 +193,11 @@ ipcMain.handle("task:list-events", async (_event, projectPath: string, taskId: s
 ipcMain.handle("model:status", () => modelStatus())
 ipcMain.handle("model:settings", () => modelSettings())
 ipcMain.handle("model:save", (_event, input) => saveModelSettings(input))
+ipcMain.handle("model:activate", (_event, recordId: string) => activateModelRecord(recordId))
+ipcMain.handle("model:delete", (_event, recordId: string) => deleteModelRecord(recordId))
 ipcMain.handle("model:test", (_event, input) => testModel(input))
 ipcMain.handle("usage:project", (_event, projectPath?: string) => projectPath ? activeProject(projectPath).usageStats() : emptyUsageStats())
+ipcMain.handle("usage:api-calls", (_event, projectPath?: string, limit?: number) => projectPath ? activeProject(projectPath).apiCallRecords(limit) : [])
 ipcMain.handle("story-index:status", (_event, projectPath: string) => activeProject(projectPath).storyIndex.status())
 ipcMain.handle("story-index:refresh", (_event, projectPath: string) => activeProject(projectPath).refreshStoryIndex())
 ipcMain.handle("story-index:search", (_event, projectPath: string, query: string, limit?: number) => activeProject(projectPath).searchStoryIndex(query, limit))

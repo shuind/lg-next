@@ -1,6 +1,8 @@
 import { useLayoutEffect, useRef, useState } from "react"
-import { BookOpen, Check, ChevronDown, Diamond, Feather, Paperclip, Send, Settings, Square } from "lucide-react"
+import { BookOpen, Check, ChevronDown, Diamond, Feather, Send, Settings, Square } from "lucide-react"
 import type { ModelStatus } from "../../shared/contracts"
+import composerSheet from "./assets/composer-sheet-v4.png"
+import composerPaperclip from "./assets/composer-paperclip-v2.png"
 
 export function AgentComposer({
   model,
@@ -47,12 +49,12 @@ export function AgentComposer({
   return (
     <footer className="composer-area">
       <div className="composer-fold" aria-hidden="true">
-        <span className="composer-fold-sheet composer-fold-sheet-back" />
-        <span className="composer-fold-sheet composer-fold-sheet-middle" />
-        <span className="composer-fold-sheet composer-fold-sheet-front" />
+        <img className="composer-backing-sheet" src={composerSheet} alt="" />
       </div>
       <div className="composer-card">
-        <Paperclip className="composer-clip" size={18} aria-hidden="true" />
+        <span className="composer-clip-wrap" aria-hidden="true">
+          <img className="composer-clip" src={composerPaperclip} alt="" />
+        </span>
         <span className="frame-edge edge-top" aria-hidden="true" />
         <span className="frame-edge edge-bottom" aria-hidden="true" />
         <span className="frame-edge edge-left" aria-hidden="true" />

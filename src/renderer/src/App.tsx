@@ -18,16 +18,22 @@ import {
   Layers3,
   MessageSquare,
   Plus,
+  ReceiptText,
+  RefreshCw,
   Save,
+  Server,
   Settings,
   SlidersHorizontal,
   Sparkles,
   SquareTerminal,
+  Trash2,
   X,
 } from "lucide-react"
 import type {
+  ApiCallRecord,
   DesktopApi,
   ModelStatus,
+  ModelRecordView,
   ModelSettingsInput,
   ModelSettingsView,
   OpenedProject,
@@ -45,7 +51,7 @@ import { StoryScene } from "./StoryScene"
 import { TopBar, type WorkspaceMode } from "./TopBar"
 
 type Drawer = "project" | "files" | "versions" | null
-type SettingsTab = "overview" | "models" | "preferences"
+type SettingsTab = "overview" | "models" | "apiCalls" | "preferences"
 type UiPreferences = {
   enterToSend: boolean
   showStoryDetail: boolean
@@ -140,6 +146,7 @@ function ConnectedApp({ api }: { api: DesktopApi }): React.JSX.Element {
   const [settingsTab, setSettingsTab] = useState<SettingsTab>("overview")
   const [modelSettings, setModelSettings] = useState<ModelSettingsView | null>(null)
   const [usageStats, setUsageStats] = useState<ProjectUsageStats | null>(null)
+  const [apiCalls, setApiCalls] = useState<ApiCallRecord[]>([])
   const [preferences, setPreferences] = useState<UiPreferences>(loadPreferences)
   const [relayOpen, setRelayOpen] = useState(false)
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([])
@@ -415,20 +422,27 @@ function ConnectedApp({ api }: { api: DesktopApi }): React.JSX.Element {
   async function openSettings(tab: SettingsTab = "overview"): Promise<void> {
     setSettingsTab(tab)
     setSettingsOpen(true)
-    const [nextSettings, nextUsage] = await Promise.all([
+    const [nextSettings, nextUsage, nextApiCalls] = await Promise.all([
       api.modelSettings(),
       api.projectUsage(project?.path),
+      api.apiCallRecords(project?.path, 200),
     ])
     setModelSettings(nextSettings)
     setUsageStats(nextUsage)
+    setApiCalls(nextApiCalls)
   }
 
   async function switchModel(modelName: string): Promise<void> {
     const current = modelSettings ?? await api.modelSettings()
+    const active = current.records.find((record) => record.id === current.activeRecordId)
+    if (!active) return
     const nextSettings = await api.saveModelSettings({
-      provider: current.provider,
-      baseUrl: current.baseUrl,
+      id: active.id,
+      name: active.name,
+      provider: active.provider,
+      baseUrl: active.baseUrl,
       model: modelName,
+      pricing: active.pricing,
     })
     const nextModel = await api.modelStatus()
     setModelSettings(nextSettings)
@@ -648,6 +662,8 @@ function ConnectedApp({ api }: { api: DesktopApi }): React.JSX.Element {
           initial={modelSettings}
           initialTab={settingsTab}
           stats={usageStats}
+          initialApiCalls={apiCalls}
+          projectPath={project?.path}
           preferences={preferences}
           onPreferencesChange={setPreferences}
           onClose={() => setSettingsOpen(false)}
@@ -966,11 +982,64 @@ function formatCompactNumber(value: number): string {
   return new Intl.NumberFormat("zh-CN", { notation: value >= 10_000 ? "compact" : "standard", maximumFractionDigits: 1 }).format(value)
 }
 
+const EMPTY_MODEL_PRICING: ModelSettingsInput["pricing"] = {
+  currency: "CNY",
+  inputPerMillion: 0,
+  outputPerMillion: 0,
+  cacheReadPerMillion: 0,
+  cacheWritePerMillion: 0,
+}
+
+function modelRecordForm(record: ModelRecordView): ModelSettingsInput {
+  return {
+    id: record.id,
+    name: record.name,
+    provider: record.provider,
+    baseUrl: record.baseUrl,
+    model: record.model,
+    apiKey: "",
+    pricing: { ...record.pricing },
+  }
+}
+
+function newModelRecordForm(): ModelSettingsInput {
+  return {
+    name: "",
+    provider: "openai-compatible",
+    baseUrl: "https://api.openai.com/v1",
+    model: "",
+    apiKey: "",
+    pricing: { ...EMPTY_MODEL_PRICING },
+  }
+}
+
+function priceLabel(value: number, currency: ModelSettingsInput["pricing"]["currency"]): string {
+  const symbol = currency === "CNY" ? "¥" : "$"
+  return `${symbol}${value.toLocaleString("zh-CN", { maximumFractionDigits: 4 })}/M`
+}
+
+function ApiRequestDetails({ api, body }: { api: DesktopApi; body?: string }): React.JSX.Element {
+  const [open, setOpen] = useState(false)
+  if (!body) return <div className="api-request-missing">旧记录没有请求快照</div>
+  let formatted = body
+  if (open) {
+    try { formatted = JSON.stringify(JSON.parse(body) as unknown, null, 2) } catch { formatted = body }
+  }
+  return (
+    <details className="api-request-body" onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary><span>完整请求</span><small>{body.length.toLocaleString("zh-CN")} 字符 · 不含 API Key</small></summary>
+      {open && <div><button onClick={() => void api.copyText(formatted)}><Copy size={11} />复制 JSON</button><pre>{formatted}</pre></div>}
+    </details>
+  )
+}
+
 function SettingsCenter({
   api,
   initial,
   initialTab,
   stats,
+  initialApiCalls,
+  projectPath,
   preferences,
   onPreferencesChange,
   onClose,
@@ -980,20 +1049,53 @@ function SettingsCenter({
   initial: ModelSettingsView
   initialTab: SettingsTab
   stats: ProjectUsageStats
+  initialApiCalls: ApiCallRecord[]
+  projectPath?: string
   preferences: UiPreferences
   onPreferencesChange(value: UiPreferences): void
   onClose(): void
   onSaved(): Promise<void>
 }): React.JSX.Element {
   const [tab, setTab] = useState<SettingsTab>(initialTab)
-  const [form, setForm] = useState<ModelSettingsInput>({ provider: initial.provider, baseUrl: initial.baseUrl, model: initial.model, apiKey: "" })
+  const initialRecord = initial.records.find((record) => record.id === initial.activeRecordId) ?? initial.records[0]
+  const [settings, setSettings] = useState(initial)
+  const [selectedRecordId, setSelectedRecordId] = useState(initialRecord?.id ?? "new")
+  const [form, setForm] = useState<ModelSettingsInput>(() => initialRecord ? modelRecordForm(initialRecord) : newModelRecordForm())
   const [busy, setBusy] = useState<"save" | "test" | null>(null)
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
+  const [calls, setCalls] = useState(initialApiCalls)
+  const [callsBusy, setCallsBusy] = useState(false)
   const maxDailyRuns = Math.max(1, ...stats.daily.map((item) => item.runs))
 
-  function update(field: keyof ModelSettingsInput, value: string): void {
+  function update(field: "name" | "provider" | "baseUrl" | "model" | "apiKey", value: string): void {
     setForm((current) => ({ ...current, [field]: value }))
+    setMessage("")
+    setError("")
+  }
+
+  function updatePrice(field: keyof ModelSettingsInput["pricing"], value: string): void {
+    setForm((current) => ({
+      ...current,
+      pricing: {
+        ...current.pricing,
+        [field]: field === "currency" ? value : Math.max(0, Number(value) || 0),
+      },
+    }))
+    setMessage("")
+    setError("")
+  }
+
+  function selectRecord(record: ModelRecordView): void {
+    setSelectedRecordId(record.id)
+    setForm(modelRecordForm(record))
+    setMessage("")
+    setError("")
+  }
+
+  function addRecord(): void {
+    setSelectedRecordId("new")
+    setForm(newModelRecordForm())
     setMessage("")
     setError("")
   }
@@ -1001,12 +1103,58 @@ function SettingsCenter({
   async function save(): Promise<void> {
     setBusy("save"); setError("")
     try {
-      await api.saveModelSettings(form)
+      const next = await api.saveModelSettings(form)
+      const active = next.records.find((record) => record.id === next.activeRecordId)
+      setSettings(next)
+      if (active) {
+        setSelectedRecordId(active.id)
+        setForm(modelRecordForm(active))
+      }
       await onSaved()
-      setMessage("设置已保存在本机，并立即生效。")
+      setMessage("API 记录已保存，并设为当前连接。")
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason))
     } finally { setBusy(null) }
+  }
+
+  async function activate(): Promise<void> {
+    if (selectedRecordId === "new") return
+    setBusy("save"); setError("")
+    try {
+      const next = await api.activateModelRecord(selectedRecordId)
+      setSettings(next)
+      await onSaved()
+      setMessage("已切换为当前连接。")
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason))
+    } finally { setBusy(null) }
+  }
+
+  async function remove(): Promise<void> {
+    if (selectedRecordId === "new" || form.id === "environment") return
+    if (!window.confirm(`删除 API 记录“${form.name}”？此操作不会删除任何作品。`)) return
+    setBusy("save"); setError("")
+    try {
+      const next = await api.deleteModelRecord(selectedRecordId)
+      const active = next.records.find((record) => record.id === next.activeRecordId) ?? next.records[0]
+      setSettings(next)
+      setSelectedRecordId(active?.id ?? "new")
+      setForm(active ? modelRecordForm(active) : newModelRecordForm())
+      await onSaved()
+      setMessage("API 记录已删除。")
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason))
+    } finally { setBusy(null) }
+  }
+
+  async function refreshCalls(): Promise<void> {
+    if (!projectPath) return
+    setCallsBusy(true)
+    try {
+      setCalls(await api.apiCallRecords(projectPath, 200))
+    } finally {
+      setCallsBusy(false)
+    }
   }
 
   async function test(): Promise<void> {
@@ -1027,7 +1175,8 @@ function SettingsCenter({
           <div className="settings-brand"><span><Layers3 size={17} /></span><div><strong>LG Next</strong><small>设置</small></div></div>
           <nav>
             <button className={tab === "overview" ? "active" : ""} onClick={() => setTab("overview")}><BarChart3 size={15} />使用概览</button>
-            <button className={tab === "models" ? "active" : ""} onClick={() => setTab("models")}><Bot size={15} />模型连接</button>
+            <button className={tab === "models" ? "active" : ""} onClick={() => setTab("models")}><Server size={15} />API 管理</button>
+            <button className={tab === "apiCalls" ? "active" : ""} onClick={() => setTab("apiCalls")}><ReceiptText size={15} />调用记录</button>
             <button className={tab === "preferences" ? "active" : ""} onClick={() => setTab("preferences")}><SlidersHorizontal size={15} />界面偏好</button>
           </nav>
           <div className="settings-local-note"><Database size={14} /><span>作品与记录保存在本地</span></div>
@@ -1036,8 +1185,8 @@ function SettingsCenter({
         <div className="settings-main">
           <header className="settings-titlebar">
             <div>
-              <strong>{tab === "overview" ? "使用概览" : tab === "models" ? "模型连接" : "界面偏好"}</strong>
-              <small>{tab === "overview" ? (stats.projectName ?? "尚未打开作品") : tab === "models" ? "OpenAI 兼容接口" : "只影响这台设备"}</small>
+              <strong>{tab === "overview" ? "使用概览" : tab === "models" ? "API 管理" : tab === "apiCalls" ? "调用记录" : "界面偏好"}</strong>
+              <small>{tab === "overview" ? (stats.projectName ?? "尚未打开作品") : tab === "models" ? `${settings.records.length} 条记录 · 当前连接单独生效` : tab === "apiCalls" ? "每一次真实模型请求，按新到旧排列" : "只影响这台设备"}</small>
             </div>
             <button onClick={onClose} aria-label="关闭设置"><X size={17} /></button>
           </header>
@@ -1077,25 +1226,90 @@ function SettingsCenter({
 
           {tab === "models" && (
             <div className="settings-scroll model-settings-panel">
-              <section className="connection-card">
-                <div><span className={`connection-dot ${initial.hasApiKey ? "online" : ""}`} /><div><strong>{initial.hasApiKey ? "连接已配置" : "尚未配置连接"}</strong><small>{initial.source === "environment" ? "来自环境变量" : initial.source === "app" ? "保存在此设备" : "填写后即可在对话中使用"}</small></div></div>
-                <span>{form.model || "未选择模型"}</span>
-              </section>
-              <section className="settings-form-section">
-                <header><strong>接口</strong><small>支持 OpenAI 兼容服务</small></header>
-                <label><span>提供方</span><input value={form.provider} onChange={(event) => update("provider", event.target.value)} placeholder="openai-compatible" /></label>
-                <label><span>Base URL</span><input value={form.baseUrl} onChange={(event) => update("baseUrl", event.target.value)} placeholder="https://api.deepseek.com" /></label>
-                <label><span>API Key</span><input type="password" value={form.apiKey} onChange={(event) => update("apiKey", event.target.value)} placeholder={initial.hasApiKey ? "已保存；留空则保持不变" : "输入 API Key"} /></label>
-              </section>
-              <section className="settings-form-section">
-                <header><strong>默认模型</strong><small>也可以在每次对话的输入框中切换</small></header>
-                <label><span>模型 ID</span><input value={form.model} onChange={(event) => update("model", event.target.value)} placeholder="deepseek-chat" /></label>
-                <div className="model-chips">{initial.recentModels.map((item) => <button className={form.model === item ? "active" : ""} key={item} onClick={() => update("model", item)}>{item}</button>)}</div>
-              </section>
-              {initial.source === "environment" && <small className="settings-note">当前连接来自环境变量；保存后会优先使用应用内设置。</small>}
-              {message && <div className="settings-success">{message}</div>}
-              {error && <div className="settings-error">{error}</div>}
-              <footer className="settings-actions"><button onClick={() => void test()} disabled={Boolean(busy)}>{busy === "test" ? "测试中…" : "测试连接"}</button><button className="primary" onClick={() => void save()} disabled={Boolean(busy)}>{busy === "save" ? "保存中…" : "保存并应用"}</button></footer>
+              <header className="api-record-heading">
+                <div><strong>中转站与模型</strong><small>每条记录独立保存 Key、模型和计费价格</small></div>
+                <button onClick={addRecord}><Plus size={13} />新增 API</button>
+              </header>
+              <div className="api-record-workspace">
+                <aside className="api-record-list" aria-label="API 记录列表">
+                  {settings.records.map((record) => (
+                    <button className={selectedRecordId === record.id ? "selected" : ""} key={record.id} onClick={() => selectRecord(record)}>
+                      <span className={`connection-dot ${record.hasApiKey ? "online" : ""}`} />
+                      <span className="api-record-copy">
+                        <span><strong>{record.name}</strong>{settings.activeRecordId === record.id && <em>当前</em>}</span>
+                        <small>{record.model}</small>
+                        <small>{record.baseUrl.replace(/^https?:\/\//, "")}</small>
+                        <span className="api-price-summary">
+                          <i>入 {priceLabel(record.pricing.inputPerMillion, record.pricing.currency)}</i>
+                          <i>出 {priceLabel(record.pricing.outputPerMillion, record.pricing.currency)}</i>
+                          <i>缓存 {priceLabel(record.pricing.cacheReadPerMillion, record.pricing.currency)}</i>
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                  {settings.records.length === 0 && <div className="api-record-empty"><Server size={18} /><span>还没有 API 记录</span><small>新增一条即可开始使用</small></div>}
+                </aside>
+
+                <section className="api-record-editor">
+                  <header>
+                    <div><strong>{selectedRecordId === "new" ? "新增 API 记录" : form.name || "未命名记录"}</strong><small>{form.id === "environment" ? "来自环境变量；保存后会复制到本机" : "Key 仅保存在当前设备"}</small></div>
+                    {selectedRecordId !== "new" && form.id !== "environment" && <button className="danger-icon" onClick={() => void remove()} title="删除此记录" aria-label="删除此记录"><Trash2 size={14} /></button>}
+                  </header>
+                  <div className="api-form-grid">
+                    <label><span>记录名称</span><input value={form.name} onChange={(event) => update("name", event.target.value)} placeholder="例如：硅基流动主站" /></label>
+                    <label><span>提供方</span><input value={form.provider} onChange={(event) => update("provider", event.target.value)} placeholder="openai-compatible" /></label>
+                    <label className="wide"><span>Base URL</span><input value={form.baseUrl} onChange={(event) => update("baseUrl", event.target.value)} placeholder="https://api.example.com/v1" /></label>
+                    <label className="wide"><span>API Key</span><input type="password" value={form.apiKey} onChange={(event) => update("apiKey", event.target.value)} placeholder={form.id ? "已保存；留空保持不变" : "输入 API Key"} /></label>
+                    <label className="wide"><span>模型 ID</span><input value={form.model} onChange={(event) => update("model", event.target.value)} placeholder="deepseek-chat" /></label>
+                  </div>
+                  <div className="api-pricing-section">
+                    <header><div><strong>价格</strong><small>每百万 tokens，仅用于本地成本参考</small></div><select value={form.pricing.currency} onChange={(event) => updatePrice("currency", event.target.value)}><option value="CNY">人民币 CNY</option><option value="USD">美元 USD</option></select></header>
+                    <div>
+                      <label><span>输入</span><input type="number" min="0" step="0.0001" value={form.pricing.inputPerMillion} onChange={(event) => updatePrice("inputPerMillion", event.target.value)} /></label>
+                      <label><span>输出</span><input type="number" min="0" step="0.0001" value={form.pricing.outputPerMillion} onChange={(event) => updatePrice("outputPerMillion", event.target.value)} /></label>
+                      <label><span>缓存读取</span><input type="number" min="0" step="0.0001" value={form.pricing.cacheReadPerMillion} onChange={(event) => updatePrice("cacheReadPerMillion", event.target.value)} /></label>
+                      <label><span>缓存写入</span><input type="number" min="0" step="0.0001" value={form.pricing.cacheWritePerMillion} onChange={(event) => updatePrice("cacheWritePerMillion", event.target.value)} /></label>
+                    </div>
+                    <p>缓存是否命中由 API 服务商决定；这里记录服务商的缓存计费单价。</p>
+                  </div>
+                  {message && <div className="settings-success">{message}</div>}
+                  {error && <div className="settings-error">{error}</div>}
+                  <footer className="api-record-actions">
+                    <button onClick={() => void test()} disabled={Boolean(busy)}>{busy === "test" ? "测试中…" : "测试连接"}</button>
+                    {selectedRecordId !== "new" && settings.activeRecordId !== selectedRecordId && form.id !== "environment" && <button onClick={() => void activate()} disabled={Boolean(busy)}>设为当前</button>}
+                    <button className="primary" onClick={() => void save()} disabled={Boolean(busy)}>{busy === "save" ? "保存中…" : form.id === "environment" ? "保存到本机并使用" : "保存并使用"}</button>
+                  </footer>
+                </section>
+              </div>
+            </div>
+          )}
+
+          {tab === "apiCalls" && (
+            <div className="settings-scroll api-call-panel">
+              <header className="api-call-toolbar">
+                <div><strong>API 调用流水</strong><small>{projectPath ? `当前作品 · 最近 ${calls.length} 条` : "打开作品后显示调用记录"}</small></div>
+                <button onClick={() => void refreshCalls()} disabled={!projectPath || callsBusy}><RefreshCw size={12} className={callsBusy ? "spinning" : ""} />刷新</button>
+              </header>
+              {calls.length > 0 ? <>
+                <div className="api-call-summary">
+                  <article><span>请求次数</span><strong>{calls.length}</strong></article>
+                  <article><span>输入 tokens</span><strong>{formatCompactNumber(calls.reduce((sum, call) => sum + call.inputTokens, 0))}</strong></article>
+                  <article><span>输出 tokens</span><strong>{formatCompactNumber(calls.reduce((sum, call) => sum + call.outputTokens, 0))}</strong></article>
+                  <article><span>缓存命中</span><strong>{formatCompactNumber(calls.reduce((sum, call) => sum + call.cachedInputTokens, 0))}</strong></article>
+                </div>
+                <div className="api-call-list">
+                  <div className="api-call-columns"><span>时间 / 状态</span><span>站点 / 模型</span><span>Token 明细</span><span>延迟 / 费用</span></div>
+                  {calls.map((call) => (
+                    <article className={call.status} key={call.id} title={call.error}>
+                      <div><strong>{new Date(call.createdAt).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })}</strong><small><i />{call.status === "succeeded" ? "成功" : "失败"} · {call.kind === "compaction" ? "上下文压缩" : call.kind === "final" ? "收尾请求" : "Agent 请求"}</small></div>
+                      <div><strong>{call.recordName || call.provider}</strong><small>{call.model}</small><small>{call.baseUrl.replace(/^https?:\/\//, "")}</small></div>
+                      <div className="api-token-detail"><span>输入 <b>{call.inputTokens.toLocaleString("zh-CN")}</b></span><span>输出 <b>{call.outputTokens.toLocaleString("zh-CN")}</b></span><span>缓存读 <b>{call.cachedInputTokens.toLocaleString("zh-CN")}</b></span><span>缓存写 <b>{call.cacheWriteInputTokens.toLocaleString("zh-CN")}</b></span></div>
+                      <div className="api-call-charge"><strong>{call.latencyMs.toLocaleString("zh-CN")} ms</strong><small>{call.cost === undefined || !call.currency ? "未配置价格" : `${call.currency === "CNY" ? "¥" : "$"}${call.cost.toFixed(6)}`}</small></div>
+                      <ApiRequestDetails api={api} body={call.requestBody} />
+                    </article>
+                  ))}
+                </div>
+              </> : <div className="api-call-empty"><ReceiptText size={25} /><strong>{projectPath ? "还没有 API 调用记录" : "尚未打开作品"}</strong><span>{projectPath ? "下一次 Agent 请求会按实际 API 调用逐条记录在这里。" : "调用记录跟随作品保存在本地。"}</span></div>}
             </div>
           )}
 

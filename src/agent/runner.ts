@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto"
 import OpenAI from "openai"
 import type {
+  ChatCompletion,
   ChatCompletionAssistantMessageParam,
   ChatCompletionMessageParam,
 } from "openai/resources/chat/completions"
@@ -28,6 +29,14 @@ interface FunctionToolCall {
 interface UsageTotal {
   promptTokens: number
   completionTokens: number
+  totalTokens: number
+}
+
+interface ApiUsage {
+  inputTokens: number
+  outputTokens: number
+  cachedInputTokens: number
+  cacheWriteInputTokens: number
   totalTokens: number
 }
 
@@ -65,11 +74,70 @@ function parseArguments(value: string): Record<string, unknown> {
   }
 }
 
-function addUsage(total: UsageTotal, usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number } | null): void {
-  if (!usage) return
-  total.promptTokens += usage.prompt_tokens
-  total.completionTokens += usage.completion_tokens
-  total.totalTokens += usage.total_tokens
+function apiUsage(usage: unknown): ApiUsage {
+  const value = (usage ?? {}) as Record<string, unknown>
+  const promptDetails = (value.prompt_tokens_details ?? {}) as Record<string, unknown>
+  const number = (candidate: unknown): number => typeof candidate === "number" && Number.isFinite(candidate) ? Math.max(0, Math.round(candidate)) : 0
+  const cachedInputTokens = number(promptDetails.cached_tokens ?? value.prompt_cache_hit_tokens ?? value.cache_read_input_tokens)
+  const cacheWriteInputTokens = number(promptDetails.cache_creation_tokens ?? value.cache_creation_input_tokens)
+  const promptTokens = number(value.prompt_tokens)
+  const inputTokens = promptTokens || number(value.input_tokens) + cachedInputTokens + cacheWriteInputTokens
+  const outputTokens = number(value.completion_tokens ?? value.output_tokens)
+  return {
+    inputTokens,
+    outputTokens,
+    cachedInputTokens,
+    cacheWriteInputTokens,
+    totalTokens: number(value.total_tokens) || inputTokens + outputTokens,
+  }
+}
+
+function addUsage(total: UsageTotal, rawUsage: unknown): void {
+  const usage = apiUsage(rawUsage)
+  total.promptTokens += usage.inputTokens
+  total.completionTokens += usage.outputTokens
+  total.totalTokens += usage.totalTokens
+}
+
+function apiCallEvent(request: AgentRunRequest, input: {
+  kind: "agent" | "compaction" | "final"
+  startedAt: number
+  finishedAt?: number
+  usage?: unknown
+  requestBody?: string
+  error?: unknown
+}): TaskEvent {
+  const usage = apiUsage(input.usage)
+  const pricing = request.model.pricing
+  const ordinaryInput = Math.max(0, usage.inputTokens - usage.cachedInputTokens - usage.cacheWriteInputTokens)
+  const cost = pricing ? (
+    ordinaryInput * pricing.inputPerMillion
+    + usage.outputTokens * pricing.outputPerMillion
+    + usage.cachedInputTokens * pricing.cacheReadPerMillion
+    + usage.cacheWriteInputTokens * pricing.cacheWritePerMillion
+  ) / 1_000_000 : undefined
+  const finishedAt = input.finishedAt ?? Date.now()
+  return {
+    id: randomUUID(),
+    taskId: request.taskId,
+    requestId: request.requestId,
+    type: "api_call",
+    createdAt: new Date(input.startedAt).toISOString(),
+    finishedAt: new Date(finishedAt).toISOString(),
+    status: input.error ? "failed" : "succeeded",
+    kind: input.kind,
+    recordId: request.model.recordId,
+    recordName: request.model.recordName,
+    provider: request.model.provider,
+    baseUrl: request.model.baseUrl,
+    model: request.model.model,
+    ...usage,
+    latencyMs: Math.max(0, finishedAt - input.startedAt),
+    currency: pricing?.currency,
+    cost,
+    requestBody: input.requestBody,
+    error: input.error instanceof Error ? input.error.message : input.error ? String(input.error) : undefined,
+  }
 }
 
 function taskContext(request: AgentRunRequest): string {
@@ -116,11 +184,21 @@ async function finalWithoutTools(input: {
   usage: UsageTotal
 }): Promise<string> {
   input.messages.push({ role: "system", content: `${input.reason}\n停止继续调用工具。根据已经验证的证据和实际动作，给用户一个简洁、诚实的最终结果；未完成的部分明确说明。` })
-  const response = await input.client.chat.completions.create({
+  const requestBody = {
     model: input.model,
     messages: input.messages,
-    stream: false,
-  }, { signal: input.signal })
+    stream: false as const,
+  }
+  const serializedRequest = JSON.stringify(requestBody)
+  const startedAt = Date.now()
+  let response: ChatCompletion
+  try {
+    response = await input.client.chat.completions.create(requestBody, { signal: input.signal })
+    input.emit(apiCallEvent(input.request, { kind: "final", startedAt, usage: response.usage, requestBody: serializedRequest }))
+  } catch (error) {
+    input.emit(apiCallEvent(input.request, { kind: "final", startedAt, requestBody: serializedRequest, error }))
+    throw error
+  }
   addUsage(input.usage, response.usage)
   const text = response.choices[0]?.message.content?.trim() || "本次运行已停止，没有生成额外结果。"
   input.emit({ ...eventBase(input.request), type: "assistant_delta", text })
@@ -178,7 +256,13 @@ export async function runAgent(request: AgentRunRequest, emit: Emit, signal?: Ab
   emit({ ...eventBase(request), type: "status", label: `正在使用 ${request.model.model}` })
 
   try {
-    const compacted = await compactSession({ client, model: request.model.model, messages: sessionMessages, signal })
+    const compacted = await compactSession({
+      client,
+      model: request.model.model,
+      messages: sessionMessages,
+      signal,
+      onApiCall: (call) => emit(apiCallEvent(request, { kind: "compaction", ...call })),
+    })
     sessionMessages = compacted.messages
     messages = [{ role: "system", content: SYSTEM_PROMPT }, ...sessionMessages]
     if (compacted.usage) {
@@ -204,32 +288,42 @@ export async function runAgent(request: AgentRunRequest, emit: Emit, signal?: Ab
 
     for (let loop = 0; loop < HARD_LOOPS; loop += 1) {
       if (signal?.aborted) throw new DOMException("Agent run cancelled", "AbortError")
-      const stream = await client.chat.completions.create({
+      let text = ""
+      const calls = new Map<number, ToolCallPart>()
+      const startedAt = Date.now()
+      let callUsage: unknown
+      const requestBody = {
         model: request.model.model,
         messages,
         tools: tools.map((tool) => tool.definition),
-        tool_choice: "auto",
-        stream: true,
+        tool_choice: "auto" as const,
+        stream: true as const,
         stream_options: { include_usage: true },
-      }, { signal })
-
-      let text = ""
-      const calls = new Map<number, ToolCallPart>()
-      for await (const chunk of stream) {
-        const delta = chunk.choices[0]?.delta
-        if (delta?.content) {
-          text += delta.content
-          emit({ ...eventBase(request), type: "assistant_delta", text: delta.content })
+      }
+      const serializedRequest = JSON.stringify(requestBody)
+      try {
+        const stream = await client.chat.completions.create(requestBody, { signal })
+        for await (const chunk of stream) {
+          const delta = chunk.choices[0]?.delta
+          if (delta?.content) {
+            text += delta.content
+            emit({ ...eventBase(request), type: "assistant_delta", text: delta.content })
+          }
+          for (const part of delta?.tool_calls ?? []) {
+            const current = calls.get(part.index) ?? { id: "", name: "", arguments: "" }
+            calls.set(part.index, {
+              id: part.id ?? current.id,
+              name: part.function?.name ?? current.name,
+              arguments: `${current.arguments}${part.function?.arguments ?? ""}`,
+            })
+          }
+          if (chunk.usage) callUsage = chunk.usage
+          addUsage(usage, chunk.usage)
         }
-        for (const part of delta?.tool_calls ?? []) {
-          const current = calls.get(part.index) ?? { id: "", name: "", arguments: "" }
-          calls.set(part.index, {
-            id: part.id ?? current.id,
-            name: part.function?.name ?? current.name,
-            arguments: `${current.arguments}${part.function?.arguments ?? ""}`,
-          })
-        }
-        addUsage(usage, chunk.usage)
+        emit(apiCallEvent(request, { kind: "agent", startedAt, usage: callUsage, requestBody: serializedRequest }))
+      } catch (error) {
+        emit(apiCallEvent(request, { kind: "agent", startedAt, usage: callUsage, requestBody: serializedRequest, error }))
+        throw error
       }
 
       const toolCalls: FunctionToolCall[] = [...calls.entries()]

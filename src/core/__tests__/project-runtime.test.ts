@@ -171,4 +171,38 @@ describe("ProjectRuntime", () => {
     expect(stats.characterCount).toBe("#第一章一二三四五。".length)
     expect(stats.daily.at(-1)).toMatchObject({ runs: 1, tokens: 150 })
   })
+
+  it("lists individual API calls newest first with cache and cost details", async () => {
+    const root = await temporaryProject()
+    const runtime = new ProjectRuntime(root)
+    await runtime.initialize()
+    const task = await runtime.createTask("调用记录")
+    const base = {
+      taskId: task.id,
+      requestId: "request-api",
+      type: "api_call" as const,
+      status: "succeeded" as const,
+      kind: "agent" as const,
+      finishedAt: "2026-07-20T10:00:01.000Z",
+      provider: "openai-compatible",
+      baseUrl: "https://relay.example/v1",
+      model: "model-a",
+      inputTokens: 1000,
+      outputTokens: 200,
+      cachedInputTokens: 600,
+      cacheWriteInputTokens: 0,
+      totalTokens: 1200,
+      latencyMs: 800,
+      currency: "CNY" as const,
+      cost: 0.0024,
+      requestBody: JSON.stringify({ model: "model-a", messages: [{ role: "user", content: "继续" }] }),
+    }
+    await runtime.events.append({ ...base, id: "api-old", createdAt: "2026-07-20T10:00:00.000Z" })
+    await runtime.events.append({ ...base, id: "api-new", createdAt: "2026-07-20T11:00:00.000Z", finishedAt: "2026-07-20T11:00:01.000Z" })
+
+    const calls = await runtime.apiCallRecords()
+    expect(calls.map((call) => call.id)).toEqual(["api-new", "api-old"])
+    expect(calls[0]).toMatchObject({ cachedInputTokens: 600, cost: 0.0024, latencyMs: 800 })
+    expect(JSON.parse(calls[0].requestBody!)).toMatchObject({ model: "model-a" })
+  })
 })

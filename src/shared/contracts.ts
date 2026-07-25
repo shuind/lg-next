@@ -107,6 +107,31 @@ export type TaskEvent =
       id: string
       taskId: string
       requestId: string
+      type: "api_call"
+      createdAt: string
+      finishedAt: string
+      status: "succeeded" | "failed"
+      kind: "agent" | "compaction" | "final"
+      recordId?: string
+      recordName?: string
+      provider: string
+      baseUrl: string
+      model: string
+      inputTokens: number
+      outputTokens: number
+      cachedInputTokens: number
+      cacheWriteInputTokens: number
+      totalTokens: number
+      latencyMs: number
+      currency?: ModelPriceCurrency
+      cost?: number
+      requestBody?: string
+      error?: string
+    }
+  | {
+      id: string
+      taskId: string
+      requestId: string
       type: "cancelled"
       createdAt: string
       message: string
@@ -151,20 +176,50 @@ export type TaskEvent =
 
 export interface ModelStatus {
   configured: boolean
+  recordId?: string
+  recordName?: string
   provider?: string
   model?: string
   baseUrl?: string
   source?: "app" | "environment" | "none"
 }
 
+export type ModelPriceCurrency = "CNY" | "USD"
+
+export interface ModelPricing {
+  currency: ModelPriceCurrency
+  inputPerMillion: number
+  outputPerMillion: number
+  cacheReadPerMillion: number
+  cacheWritePerMillion: number
+}
+
 export interface ModelSettingsInput {
+  id?: string
+  name: string
   provider: string
   baseUrl: string
   model: string
   apiKey?: string
+  pricing: ModelPricing
+}
+
+export interface ModelRecordView {
+  id: string
+  name: string
+  provider: string
+  baseUrl: string
+  model: string
+  recentModels: string[]
+  hasApiKey: boolean
+  source: "app" | "environment" | "none"
+  pricing: ModelPricing
+  updatedAt?: string
 }
 
 export interface ModelSettingsView {
+  activeRecordId?: string
+  records: ModelRecordView[]
   provider: string
   baseUrl: string
   model: string
@@ -199,6 +254,8 @@ export interface ModelTestResult {
   latencyMs: number
   reply: string
 }
+
+export type ApiCallRecord = Extract<TaskEvent, { type: "api_call" }>
 
 export interface StoryIndexStatus {
   state: "ready" | "stale" | "missing"
@@ -317,7 +374,10 @@ export interface DesktopApi {
   modelStatus(): Promise<ModelStatus>
   modelSettings(): Promise<ModelSettingsView>
   saveModelSettings(input: ModelSettingsInput): Promise<ModelSettingsView>
+  activateModelRecord(recordId: string): Promise<ModelSettingsView>
+  deleteModelRecord(recordId: string): Promise<ModelSettingsView>
   testModel(input?: ModelSettingsInput): Promise<ModelTestResult>
+  apiCallRecords(projectPath?: string, limit?: number): Promise<ApiCallRecord[]>
   projectUsage(projectPath?: string): Promise<ProjectUsageStats>
   storyIndexStatus(projectPath: string): Promise<StoryIndexStatus>
   refreshStoryIndex(projectPath: string): Promise<StoryIndexStatus>
@@ -391,6 +451,28 @@ export const taskEventSchema = z.discriminatedUnion("type", [
     tokenBefore: z.number().int().nonnegative(),
     tokenAfter: z.number().int().nonnegative(),
     changedMessages: z.number().int().nonnegative(),
+  }),
+  z.object({
+    ...taskEventBase,
+    type: z.literal("api_call"),
+    finishedAt: z.iso.datetime(),
+    status: z.enum(["succeeded", "failed"]),
+    kind: z.enum(["agent", "compaction", "final"]),
+    recordId: z.string().optional(),
+    recordName: z.string().optional(),
+    provider: z.string(),
+    baseUrl: z.string(),
+    model: z.string(),
+    inputTokens: z.number().int().nonnegative(),
+    outputTokens: z.number().int().nonnegative(),
+    cachedInputTokens: z.number().int().nonnegative(),
+    cacheWriteInputTokens: z.number().int().nonnegative(),
+    totalTokens: z.number().int().nonnegative(),
+    latencyMs: z.number().int().nonnegative(),
+    currency: z.enum(["CNY", "USD"]).optional(),
+    cost: z.number().nonnegative().optional(),
+    requestBody: z.string().optional(),
+    error: z.string().optional(),
   }),
   z.object({ ...taskEventBase, type: z.literal("cancelled"), message: z.string() }),
   z.object({

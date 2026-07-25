@@ -1,12 +1,47 @@
 import { app, safeStorage } from "electron"
 import { mkdir, readFile, writeFile } from "node:fs/promises"
+import { randomUUID } from "node:crypto"
 import path from "node:path"
 import OpenAI from "openai"
 import { z } from "zod"
 import type { ModelConfig } from "../agent/protocol"
-import type { ModelSettingsInput, ModelSettingsView, ModelStatus, ModelTestResult } from "../shared/contracts"
+import type {
+  ModelPricing,
+  ModelRecordView,
+  ModelSettingsInput,
+  ModelSettingsView,
+  ModelStatus,
+  ModelTestResult,
+} from "../shared/contracts"
+
+const pricingSchema = z.object({
+  currency: z.enum(["CNY", "USD"]),
+  inputPerMillion: z.number().finite().nonnegative(),
+  outputPerMillion: z.number().finite().nonnegative(),
+  cacheReadPerMillion: z.number().finite().nonnegative(),
+  cacheWritePerMillion: z.number().finite().nonnegative(),
+})
+
+const storedRecordSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  provider: z.string().min(1),
+  baseUrl: z.url(),
+  model: z.string().min(1),
+  recentModels: z.array(z.string().min(1)).max(12).optional(),
+  apiKey: z.string().min(1),
+  apiKeyStorage: z.enum(["encrypted", "plain"]),
+  pricing: pricingSchema,
+  updatedAt: z.iso.datetime(),
+})
 
 const storedSettingsSchema = z.object({
+  version: z.literal(2),
+  activeRecordId: z.string().optional(),
+  records: z.array(storedRecordSchema).max(50),
+})
+
+const legacySettingsSchema = z.object({
   version: z.literal(1),
   provider: z.string().min(1),
   baseUrl: z.url(),
@@ -17,7 +52,16 @@ const storedSettingsSchema = z.object({
   updatedAt: z.iso.datetime(),
 })
 
+type StoredRecord = z.infer<typeof storedRecordSchema>
 type StoredSettings = z.infer<typeof storedSettingsSchema>
+
+const EMPTY_PRICING: ModelPricing = {
+  currency: "CNY",
+  inputPerMillion: 0,
+  outputPerMillion: 0,
+  cacheReadPerMillion: 0,
+  cacheWritePerMillion: 0,
+}
 
 function availableModels(provider: string, baseUrl: string, model: string, recentModels: string[] = []): string[] {
   const candidates = [model, ...recentModels]
@@ -31,7 +75,26 @@ function settingsPath(): string {
 
 async function readStored(): Promise<StoredSettings | null> {
   try {
-    return storedSettingsSchema.parse(JSON.parse(await readFile(settingsPath(), "utf8")) as unknown)
+    const raw = JSON.parse(await readFile(settingsPath(), "utf8")) as unknown
+    const current = storedSettingsSchema.safeParse(raw)
+    if (current.success) return current.data
+    const legacy = legacySettingsSchema.safeParse(raw)
+    if (legacy.success) {
+      const record: StoredRecord = {
+        id: "legacy-model",
+        name: legacy.data.provider === "openai-compatible" ? legacy.data.model : legacy.data.provider,
+        provider: legacy.data.provider,
+        baseUrl: legacy.data.baseUrl,
+        model: legacy.data.model,
+        recentModels: legacy.data.recentModels,
+        apiKey: legacy.data.apiKey,
+        apiKeyStorage: legacy.data.apiKeyStorage,
+        pricing: { ...EMPTY_PRICING },
+        updatedAt: legacy.data.updatedAt,
+      }
+      return { version: 2, activeRecordId: record.id, records: [record] }
+    }
+    throw current.error
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null
     console.error("Failed to read model settings", error)
@@ -39,9 +102,14 @@ async function readStored(): Promise<StoredSettings | null> {
   }
 }
 
-function decryptApiKey(settings: StoredSettings): string {
-  if (settings.apiKeyStorage === "plain") return Buffer.from(settings.apiKey, "base64").toString("utf8")
-  return safeStorage.decryptString(Buffer.from(settings.apiKey, "base64"))
+async function writeStored(settings: StoredSettings): Promise<void> {
+  await mkdir(path.dirname(settingsPath()), { recursive: true })
+  await writeFile(settingsPath(), `${JSON.stringify(settings, null, 2)}\n`, { encoding: "utf8", mode: 0o600 })
+}
+
+function decryptApiKey(record: StoredRecord): string {
+  if (record.apiKeyStorage === "plain") return Buffer.from(record.apiKey, "base64").toString("utf8")
+  return safeStorage.decryptString(Buffer.from(record.apiKey, "base64"))
 }
 
 function environmentConfig(): ModelConfig | null {
@@ -51,19 +119,105 @@ function environmentConfig(): ModelConfig | null {
   const model = process.env.LG_MODEL ?? process.env.NG_MODEL ?? process.env.DEEPSEEK_MODEL
     ?? (process.env.DEEPSEEK_API_KEY ? "deepseek-chat" : undefined)
   if (!apiKey || !baseUrl || !model) return null
-  return { provider: process.env.LG_PROVIDER ?? process.env.NG_PROVIDER ?? "openai-compatible", apiKey, baseUrl, model }
+  return {
+    recordId: "environment",
+    recordName: "环境变量",
+    provider: process.env.LG_PROVIDER ?? process.env.NG_PROVIDER ?? "openai-compatible",
+    apiKey,
+    baseUrl,
+    model,
+    pricing: { ...EMPTY_PRICING },
+  }
+}
+
+function activeStoredRecord(settings: StoredSettings | null): StoredRecord | null {
+  if (!settings?.records.length) return null
+  return settings.records.find((record) => record.id === settings.activeRecordId) ?? settings.records[0]
+}
+
+function recordConfig(record: StoredRecord): ModelConfig {
+  return {
+    recordId: record.id,
+    recordName: record.name,
+    provider: record.provider,
+    apiKey: decryptApiKey(record),
+    baseUrl: record.baseUrl.replace(/\/$/, ""),
+    model: record.model,
+    pricing: record.pricing,
+  }
+}
+
+function recordView(record: StoredRecord): ModelRecordView {
+  return {
+    id: record.id,
+    name: record.name,
+    provider: record.provider,
+    baseUrl: record.baseUrl,
+    model: record.model,
+    recentModels: availableModels(record.provider, record.baseUrl, record.model, record.recentModels),
+    hasApiKey: true,
+    source: "app",
+    pricing: record.pricing,
+    updatedAt: record.updatedAt,
+  }
+}
+
+function environmentRecord(config: ModelConfig): ModelRecordView {
+  return {
+    id: "environment",
+    name: "环境变量",
+    provider: config.provider,
+    baseUrl: config.baseUrl,
+    model: config.model,
+    recentModels: availableModels(config.provider, config.baseUrl, config.model),
+    hasApiKey: true,
+    source: "environment",
+    pricing: { ...EMPTY_PRICING },
+  }
+}
+
+function emptySettings(): ModelSettingsView {
+  return {
+    records: [],
+    provider: "openai-compatible",
+    baseUrl: "https://api.deepseek.com",
+    model: "deepseek-chat",
+    recentModels: ["deepseek-chat", "deepseek-reasoner"],
+    hasApiKey: false,
+    source: "none",
+  }
+}
+
+function settingsView(records: ModelRecordView[], activeRecordId?: string): ModelSettingsView {
+  const active = records.find((record) => record.id === activeRecordId) ?? records[0]
+  if (!active) return emptySettings()
+  return {
+    activeRecordId: active.id,
+    records,
+    provider: active.provider,
+    baseUrl: active.baseUrl,
+    model: active.model,
+    recentModels: active.recentModels,
+    hasApiKey: active.hasApiKey,
+    source: active.source,
+  }
+}
+
+function normalizedUrl(value: string): string {
+  const parsed = new URL(value.trim())
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error("Base URL 只支持 http 或 https")
+  return parsed.toString().replace(/\/$/, "")
+}
+
+function normalizedPricing(pricing: ModelPricing): ModelPricing {
+  return pricingSchema.parse(pricing)
 }
 
 export async function loadModelConfig(): Promise<ModelConfig | null> {
-  const stored = await readStored()
-  if (stored) {
+  const record = activeStoredRecord(await readStored())
+  if (record) {
     try {
-      return {
-        provider: stored.provider,
-        apiKey: decryptApiKey(stored),
-        baseUrl: stored.baseUrl.replace(/\/$/, ""),
-        model: stored.model,
-      }
+      return recordConfig(record)
     } catch (error) {
       console.error("Failed to decrypt model API key", error)
     }
@@ -73,71 +227,94 @@ export async function loadModelConfig(): Promise<ModelConfig | null> {
 
 export async function modelSettings(): Promise<ModelSettingsView> {
   const stored = await readStored()
-  if (stored) return {
-    provider: stored.provider,
-    baseUrl: stored.baseUrl,
-    model: stored.model,
-    recentModels: availableModels(stored.provider, stored.baseUrl, stored.model, stored.recentModels),
-    hasApiKey: true,
-    source: "app",
-  }
+  if (stored?.records.length) return settingsView(stored.records.map(recordView), stored.activeRecordId)
   const environment = environmentConfig()
-  if (environment) return {
-    provider: environment.provider,
-    baseUrl: environment.baseUrl,
-    model: environment.model,
-    recentModels: availableModels(environment.provider, environment.baseUrl, environment.model),
-    hasApiKey: true,
-    source: "environment",
-  }
-  return { provider: "openai-compatible", baseUrl: "https://api.deepseek.com", model: "deepseek-chat", recentModels: ["deepseek-chat", "deepseek-reasoner"], hasApiKey: false, source: "none" }
+  if (environment) return settingsView([environmentRecord(environment)], "environment")
+  return emptySettings()
 }
 
 export async function saveModelSettings(input: ModelSettingsInput): Promise<ModelSettingsView> {
+  const name = input.name.trim()
   const provider = input.provider.trim() || "openai-compatible"
-  const baseUrl = new URL(input.baseUrl.trim()).toString().replace(/\/$/, "")
+  const baseUrl = normalizedUrl(input.baseUrl)
   const model = input.model.trim()
+  if (!name) throw new Error("记录名称不能为空")
   if (!model) throw new Error("模型名称不能为空")
-  const existing = await readStored()
-  const current = await loadModelConfig()
+
+  const stored = await readStored() ?? { version: 2 as const, records: [] }
+  const existing = input.id && input.id !== "environment"
+    ? stored.records.find((record) => record.id === input.id)
+    : undefined
   let apiKey = input.apiKey?.trim()
-  if (!apiKey) apiKey = current?.apiKey
+  if (!apiKey && existing) apiKey = decryptApiKey(existing)
+  if (!apiKey && input.id === "environment") apiKey = environmentConfig()?.apiKey
   if (!apiKey) throw new Error("API Key 不能为空")
+
   const encrypted = safeStorage.isEncryptionAvailable()
-  const encoded = encrypted
-    ? safeStorage.encryptString(apiKey).toString("base64")
-    : Buffer.from(apiKey, "utf8").toString("base64")
-  const settings: StoredSettings = {
-    version: 1,
+  const id = existing?.id ?? randomUUID()
+  const updatedAt = new Date().toISOString()
+  const record: StoredRecord = {
+    id,
+    name,
     provider,
     baseUrl,
     model,
     recentModels: availableModels(provider, baseUrl, model, existing?.recentModels),
-    apiKey: encoded,
+    apiKey: encrypted ? safeStorage.encryptString(apiKey).toString("base64") : Buffer.from(apiKey, "utf8").toString("base64"),
     apiKeyStorage: encrypted ? "encrypted" : "plain",
-    updatedAt: new Date().toISOString(),
+    pricing: normalizedPricing(input.pricing),
+    updatedAt,
   }
-  await mkdir(path.dirname(settingsPath()), { recursive: true })
-  await writeFile(settingsPath(), `${JSON.stringify(settings, null, 2)}\n`, { encoding: "utf8", mode: 0o600 })
-  return { provider, baseUrl, model, recentModels: availableModels(provider, baseUrl, model, settings.recentModels), hasApiKey: true, source: "app" }
+  const records = existing
+    ? stored.records.map((item) => item.id === existing.id ? record : item)
+    : [...stored.records, record]
+  const next: StoredSettings = { version: 2, activeRecordId: id, records }
+  await writeStored(next)
+  return settingsView(records.map(recordView), id)
+}
+
+export async function activateModelRecord(recordId: string): Promise<ModelSettingsView> {
+  const stored = await readStored()
+  if (!stored?.records.some((record) => record.id === recordId)) throw new Error("API 记录不存在")
+  const next: StoredSettings = { ...stored, activeRecordId: recordId }
+  await writeStored(next)
+  return settingsView(next.records.map(recordView), recordId)
+}
+
+export async function deleteModelRecord(recordId: string): Promise<ModelSettingsView> {
+  const stored = await readStored()
+  if (!stored?.records.some((record) => record.id === recordId)) throw new Error("API 记录不存在")
+  const records = stored.records.filter((record) => record.id !== recordId)
+  const activeRecordId = stored.activeRecordId === recordId ? records[0]?.id : stored.activeRecordId
+  await writeStored({ version: 2, activeRecordId, records })
+  if (records.length) return settingsView(records.map(recordView), activeRecordId)
+  const environment = environmentConfig()
+  return environment ? settingsView([environmentRecord(environment)], "environment") : emptySettings()
 }
 
 export async function modelStatus(): Promise<ModelStatus> {
   const [config, settings] = await Promise.all([loadModelConfig(), modelSettings()])
+  const active = settings.records.find((record) => record.id === settings.activeRecordId)
   return config
-    ? { configured: true, provider: config.provider, model: config.model, baseUrl: config.baseUrl, source: settings.source }
+    ? { configured: true, recordId: active?.id, recordName: active?.name, provider: config.provider, model: config.model, baseUrl: config.baseUrl, source: settings.source }
     : { configured: false, source: "none" }
 }
 
 export async function testModel(input?: ModelSettingsInput): Promise<ModelTestResult> {
   let config: ModelConfig | null
   if (input) {
-    const existing = await loadModelConfig()
+    const stored = await readStored()
+    const existing = input.id && input.id !== "environment"
+      ? stored?.records.find((record) => record.id === input.id)
+      : undefined
     config = {
       provider: input.provider.trim() || "openai-compatible",
-      baseUrl: new URL(input.baseUrl.trim()).toString().replace(/\/$/, ""),
+      baseUrl: normalizedUrl(input.baseUrl),
       model: input.model.trim(),
-      apiKey: input.apiKey?.trim() || existing?.apiKey || "",
+      apiKey: input.apiKey?.trim()
+        || (existing ? decryptApiKey(existing) : undefined)
+        || (input.id === "environment" ? environmentConfig()?.apiKey : undefined)
+        || "",
     }
   } else {
     config = await loadModelConfig()

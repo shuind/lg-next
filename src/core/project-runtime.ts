@@ -10,7 +10,7 @@ import { normalizeRelativePath } from "./paths"
 import { StoryIndex } from "./story-index"
 import { WorkspaceMutationService } from "./workspace-mutation"
 import { CorrectionStore } from "./correction-store"
-import type { ProjectUsageStats } from "../shared/contracts"
+import type { ApiCallRecord, ProjectUsageStats } from "../shared/contracts"
 
 export interface ProjectSnapshot {
   id: string
@@ -246,5 +246,15 @@ export class ProjectRuntime {
       lastActiveAt,
       daily: [...daily].map(([date, usage]) => ({ date, ...usage })),
     }
+  }
+
+  async apiCallRecords(limit = 200): Promise<ApiCallRecord[]> {
+    const tasks = await this.tasks.list()
+    const eventGroups = await Promise.all(tasks.map((task) => this.events.list(task.id)))
+    return eventGroups
+      .flat()
+      .filter((event): event is ApiCallRecord => event.type === "api_call")
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+      .slice(0, Math.max(1, Math.min(1000, limit)))
   }
 }

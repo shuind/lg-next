@@ -1,10 +1,13 @@
-import type { TaskEvent } from "../shared/contracts"
+import type { ModelPricing, TaskEvent } from "../shared/contracts"
 
 export interface ModelConfig {
+  recordId?: string
+  recordName?: string
   provider: string
   apiKey: string
   baseUrl: string
   model: string
+  pricing?: ModelPricing
 }
 
 export interface AgentHistoryMessage {

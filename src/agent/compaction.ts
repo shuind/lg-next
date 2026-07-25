@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto"
 import type OpenAI from "openai"
-import type { ChatCompletionMessageParam } from "openai/resources/chat/completions"
+import type { ChatCompletion, ChatCompletionMessageParam } from "openai/resources/chat/completions"
 import type { CompactionBoundary } from "./session-store"
 
 export const COMPACTION_PREFIX = "LG_SESSION_COMPACTION_MEMO:"
@@ -17,6 +17,14 @@ export interface CompactionResult {
   boundary?: CompactionBoundary
   lastCompactedAt?: string
   usage?: { promptTokens: number; completionTokens: number; totalTokens: number }
+}
+
+export interface ApiCallObservation {
+  startedAt: number
+  finishedAt: number
+  usage?: unknown
+  requestBody: string
+  error?: unknown
 }
 
 function stringifyContent(content: ChatCompletionMessageParam["content"]): string {
@@ -135,6 +143,7 @@ export async function compactSession(input: {
   signal?: AbortSignal
   budgetTokens?: number
   triggerTokens?: number
+  onApiCall?: (call: ApiCallObservation) => void
 }): Promise<CompactionResult> {
   const budget = input.budgetTokens ?? contextBudgetForModel(input.model)
   const trigger = input.triggerTokens ?? Math.min(96_000, Math.floor(budget * 0.8))
@@ -173,15 +182,25 @@ export async function compactSession(input: {
     ...existingMemos.map((message) => [message]),
     ...oldGroups,
   ])
-  const response = await input.client.chat.completions.create({
+  const requestBody = {
     model: input.model,
     messages: [
-      { role: "system", content: structuredPrompt() },
-      { role: "user", content: compactionInput.rendered },
+      { role: "system" as const, content: structuredPrompt() },
+      { role: "user" as const, content: compactionInput.rendered },
     ],
     temperature: 0.1,
     max_completion_tokens: 1800,
-  }, { signal: input.signal })
+  }
+  const serializedRequest = JSON.stringify(requestBody)
+  const startedAt = Date.now()
+  let response: ChatCompletion
+  try {
+    response = await input.client.chat.completions.create(requestBody, { signal: input.signal })
+    input.onApiCall?.({ startedAt, finishedAt: Date.now(), usage: response.usage, requestBody: serializedRequest })
+  } catch (error) {
+    input.onApiCall?.({ startedAt, finishedAt: Date.now(), requestBody: serializedRequest, error })
+    throw error
+  }
   const memoText = response.choices[0]?.message.content?.trim() || "旧会话未能生成有效摘要；后续必须依靠项目文件和原文来源继续。"
   const now = new Date().toISOString()
   messages = [{ role: "system", content: `${COMPACTION_PREFIX}\nupdated_at: ${now}\n\n${memoText}` }, ...recent]
